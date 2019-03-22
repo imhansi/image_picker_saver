@@ -108,7 +108,8 @@ static const int SOURCE_GALLERY = 1;
         
         NSString * fileName=@"";
         //NSLog(@"fileData.data.length  :%ul",fileData.data.length);
-        UIImage *image=[UIImage imageWithData:fileData.data];
+        //UIImage *image=[UIImage imageWithData:fileData.data];
+        NSData *data = fileData.data;
         
         PHAuthorizationStatus status = [PHPhotoLibrary authorizationStatus];
         if (status == PHAuthorizationStatusRestricted) {
@@ -116,13 +117,13 @@ static const int SOURCE_GALLERY = 1;
         } else if (status == PHAuthorizationStatusDenied) { // if user chosen"Not Allow"
             NSLog(@"提Remind users to go to [Settings - Privacy - Photo - xxx] to open the access switch");
         } else if (status == PHAuthorizationStatusAuthorized) { // if user chosen"Allow"
-            [self saveImage:image];
+            [self saveImageData:data];
         } else if (status == PHAuthorizationStatusNotDetermined) { // if user not chosen before
             // Requests authorization with dialog
             [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
                 if (status == PHAuthorizationStatusAuthorized) { //  if user  chosen "Allow"
                     //Save Image to Directory
-                    [self saveImage:image];
+                    [self saveImageData:data];
                 }
             }];
         }
@@ -132,6 +133,44 @@ static const int SOURCE_GALLERY = 1;
         result(FlutterMethodNotImplemented);
     }
 }
+
+-(void)saveImageData:(NSData *)data  {
+    __block NSString* fileName;
+    __block NSString* localId;
+    __block PHAssetChangeRequest *assetCreationRequest = nil;
+    [[PHPhotoLibrary sharedPhotoLibrary] performChanges:^{
+        if (@available(iOS 9.0, *)) {
+            PHAssetCreationRequest *assetCreationRequest = [PHAssetCreationRequest creationRequestForAsset];
+            [assetCreationRequest addResourceWithType:PHAssetResourceTypePhoto data:data options:nil];
+            localId = [[assetCreationRequest placeholderForCreatedAsset] localIdentifier];
+        };
+        
+        // [assetCollectionChangeRequest addAssets:@[[assetChangeRequest placeholderForCreatedAsset]]];
+        
+    } completionHandler:^(BOOL success, NSError *error) {
+        
+        if (success) {
+            NSLog(@"save image successful ");
+            PHFetchResult* assetResult = [PHAsset fetchAssetsWithLocalIdentifiers:@[localId] options:nil];
+            PHAsset *asset = [assetResult firstObject];
+            [[PHImageManager defaultManager] requestImageDataForAsset:asset options:nil resultHandler:^(NSData *imageData, NSString *dataUTI, UIImageOrientation orientation, NSDictionary *info) {
+                NSLog(@"Success %@ %@",dataUTI,info);
+                
+                NSLog(@"Success PHImageFileURLKey %@  ", (NSString *)[info objectForKey:@"PHImageFileURLKey"]);
+                fileName=((NSURL *)[info objectForKey:@"PHImageFileURLKey"]).absoluteString;
+                _result(fileName);
+            }];
+            
+        } else {
+            NSLog(@"save image failed!%@",error);
+            
+            fileName= @"";
+            _result(fileName);
+            
+        }
+    }];
+}
+
 
 -(void)saveImage:(UIImage *)image  {
     __block NSString* fileName;
