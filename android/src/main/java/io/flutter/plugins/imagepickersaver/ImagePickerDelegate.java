@@ -76,6 +76,8 @@ public class ImagePickerDelegate
     @VisibleForTesting
     static final int REQUEST_CAMERA_IMAGE_PERMISSION = 2345;
     @VisibleForTesting
+    static final int REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION_FOR_SAVE = 2346;
+    @VisibleForTesting
     static final int REQUEST_CODE_CHOOSE_VIDEO_FROM_GALLERY = 2352;
     @VisibleForTesting
     static final int REQUEST_CODE_TAKE_VIDEO_WITH_CAMERA = 2353;
@@ -275,21 +277,26 @@ public class ImagePickerDelegate
 
         if (!permissionManager.isPermissionGranted(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
             permissionManager.askForPermission(
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION);
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION_FOR_SAVE);
             return;
         }
+
+        saveImageToGalleryFromPendingMethodCall();
+
+    }
+
+    private void saveImageToGalleryFromPendingMethodCall() throws IOException {
         byte[] fileData = methodCall.argument("fileData");
 
         //Bitmap bitmap = BitmapFactory.decodeByteArray(fileData, 0, fileData.length);
 
-        String title = methodCall.argument("title") == null? "Camera": methodCall.argument("title").toString();
+        String title = methodCall.argument("title") == null ? "Camera" : methodCall.argument("title").toString();
 
-        String desctiption = methodCall.argument("description") == null? "123": methodCall.argument("description").toString();
+        String desctiption = methodCall.argument("description") == null ? "123" : methodCall.argument("description").toString();
 
         String filePath = CapturePhotoUtils.insertImage(activity.getContentResolver(), fileData, title, desctiption);
 
         finishWithSuccess(filePath);
-
     }
 
     private void launchPickImageFromGalleryIntent() {
@@ -393,6 +400,16 @@ public class ImagePickerDelegate
             case REQUEST_CAMERA_VIDEO_PERMISSION:
                 if (permissionGranted) {
                     launchTakeVideoWithCameraIntent();
+                }
+                break;
+            case REQUEST_EXTERNAL_IMAGE_STORAGE_PERMISSION_FOR_SAVE:
+                if (permissionGranted) {
+                    try {
+                        saveImageToGalleryFromPendingMethodCall();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        throw new IllegalArgumentException(e);
+                    }
                 }
                 break;
             default:
