@@ -288,7 +288,12 @@ public class ImagePickerDelegate
     private void saveImageToGalleryFromPendingMethodCall() throws IOException {
         byte[] fileData = methodCall.argument("fileData");
 
-        //Bitmap bitmap = BitmapFactory.decodeByteArray(fileData, 0, fileData.length);
+        this.saveImageToGalleryResult();
+    }
+
+    private void saveImageToGalleryResult() throws IOException {
+
+        byte[] fileData = methodCall.argument("fileData");
 
         String title = methodCall.argument("title") == null ? "Camera" : methodCall.argument("title").toString();
 
